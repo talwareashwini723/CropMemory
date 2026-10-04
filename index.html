@@ -1,0 +1,85 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CropMemory</title>
+<style>
+:root{--d:#2F4A3A;--g:#3F7D58;--bg:#FBFDF9}
+*{box-sizing:border-box}body{margin:0;font-family:Calibri,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--d)}
+header{background:#EAF4E6;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #CFE6C8}
+h1{margin:0;font-size:24px;color:var(--g)}small{color:#6f8a7a}
+.pill{background:#FFF5D9;border:1px solid #EAD59A;border-radius:20px;padding:6px 14px;font-weight:700}
+main{max-width:1100px;margin:18px auto;padding:0 16px}
+.card{border-radius:12px;padding:16px;border:1px solid;margin-bottom:14px}
+.g{background:#E3F1DF;border-color:#B9D9B2}.b{background:#E1EEF7;border-color:#B5D3E8}.y{background:#FFF5D9;border-color:#EAD59A}.p{background:#FCE8E0;border-color:#F0BBA6}.v{background:#ECE6F6;border-color:#CFC3E6}
+h3{margin:0 0 8px;font-size:16px}.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+label{font-size:12px;font-weight:700;display:block;margin-bottom:3px}
+input,select,textarea{width:100%;padding:9px;border:1px solid #B9D9B2;border-radius:8px;font:inherit;background:#fff}
+button{background:var(--g);color:#fff;border:0;border-radius:8px;padding:10px 16px;font:inherit;font-weight:700;cursor:pointer}
+button.alt{background:#fff;color:var(--g);border:1px solid var(--g)}button:disabled{opacity:.6}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px}
+.item{background:#fff;border-radius:8px;padding:10px;margin-bottom:8px;font-size:14px;border:1px solid #e6efe3}
+.tag{display:inline-block;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700;margin-right:4px}
+.worked{background:#CFEBD3}.partial{background:#FFE9A8}.failed{background:#F7C5B8}.new{background:#D9CCF5}
+.opt{display:block;width:100%;text-align:left;margin-bottom:8px;background:#fff;color:var(--d);border:1px solid #B5D3E8}
+.opt:hover,.opt.sel{background:#DCEBF6}.flow{display:flex;gap:6px;flex-wrap:wrap;font-size:12px;margin-bottom:12px}
+.flow span{background:#fff;border:1px solid #CFE6C8;border-radius:14px;padding:3px 10px}.flow span.on{background:#CFE6C8;font-weight:700}
+.hide{display:none}mark{background:#FFF0A6}.ins{font-size:15px;line-height:1.5}
+</style></head><body>
+<header><div><h1>🌱 CropMemory</h1><small>Turning every farmer's experience into knowledge for the next farmer.</small></div>
+<div class="pill">🧠 Memory: <span id="cnt">–</span> experiences</div></header>
+<main>
+<div class="flow" id="flow"><span id="s1" class="on">1 Problem</span><span id="s2">2 Evidence</span><span id="s3">3 Decision</span><span id="s4">4 Outcome</span><span id="s5">5 Memory</span></div>
+
+<div class="card g"><h3>1 · Describe your problem</h3>
+<div class="row">
+<div><label>Crop</label><select id="crop"><option>Tomato</option><option>Cotton</option><option>Paddy</option></select></div>
+<div><label>Soil</label><input id="soil" placeholder="e.g. Black soil"></div>
+<div><label>Weather</label><input id="weather" placeholder="e.g. Humid, warm"></div></div>
+<div style="margin:10px 0"><label>Problem</label><textarea id="problem" rows="2" placeholder="e.g. Leaves curling and yellowing, many whiteflies"></textarea></div>
+<button onclick="advise()" id="go">🔍 Find evidence</button>
+<button class="alt" onclick="demo(0)">Demo: Tomato</button><button class="alt" onclick="demo(1)">Demo: Cotton</button><button class="alt" onclick="demo(2)">Demo: Paddy</button></div>
+
+<div id="res" class="hide">
+<div class="card v"><h3>🤖 CropMemory Agent insight <span class="tag" id="mode"></span></h3><div class="ins" id="insight"></div></div>
+<div class="grid3">
+<div class="card p"><h3>📚 Trusted sources (RAG)</h3><div id="advs"></div></div>
+<div class="card y"><h3>👨‍🌾 Similar farmer experiences</h3><div id="cases"></div></div>
+<div class="card b"><h3>✅ 3 · Your decision</h3><small>Pick what you will do (or type your own)</small><div style="margin-top:8px" id="opts"></div>
+<input id="own" placeholder="Or type your own action" oninput="pick(this.value,null)"></div></div>
+
+<div class="card g hide" id="outbox"><h3>4 · Record the outcome (follow-up)</h3>
+<div class="row"><div><label>Action taken</label><input id="act"></div>
+<div><label>Result</label><select id="result"><option value="worked">✅ Worked</option><option value="partial">🟡 Partly worked</option><option value="failed">❌ Did not work</option></select></div></div>
+<div style="margin:10px 0"><label>What happened?</label><input id="outc" placeholder="e.g. Spread stopped in 2 weeks"></div>
+<button onclick="save()">💾 Add to CropMemory</button> <span id="msg"></span></div>
+</div></main>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const demos=[["Tomato","Black soil","Humid, warm","Leaves curling upward and turning yellow, stunted plants, many whiteflies"],
+["Cotton","Black soil","Warm, humid after rain","Damaged bolls with larvae inside, rosette flowers"],
+["Paddy","Clay","Cloudy, humid","Grey spindle-shaped spots on leaves, blast symptoms"]];
+function demo(i){[$('crop').value,$('soil').value,$('weather').value,$('problem').value]=demos[i]}
+function step(n){for(let i=1;i<=5;i++)$('s'+i).className=i<=n?'on':''}
+async function stats(){const r=await(await fetch('/api/stats')).json();$('cnt').textContent=r.memory_count}
+async function advise(){
+ const b={crop:$('crop').value,soil:$('soil').value,weather:$('weather').value,problem:$('problem').value};
+ if(!b.problem.trim())return alert('Please describe the problem');
+ $('go').disabled=true;$('go').textContent='Searching…';
+ const r=await(await fetch('/api/advise',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)})).json();
+ $('go').disabled=false;$('go').textContent='🔍 Find evidence';
+ $('res').classList.remove('hide');$('outbox').classList.add('hide');step(2);
+ $('insight').textContent=r.insight;$('mode').textContent=r.mode==='ai'?'AI + RAG':'offline mode';$('mode').className='tag new';
+ $('advs').innerHTML=r.advisories.map(a=>`<div class="item"><b>${esc(a.title)}</b><br>${esc(a.text)}<br><small>${esc(a.source)}</small></div>`).join('')||'<div class="item">No trusted source matched.</div>';
+ $('cases').innerHTML=r.cases.map(c=>`<div class="item"><span class="tag ${c.result}">${c.result}</span>${c.source==='farmer'?'<span class="tag new">NEW ✨</span>':''}<span class="tag" style="background:#eee">match ${Math.round(c.score*100)}%</span><br><b>${esc(c.action)}</b><br>${esc(c.outcome)}<br><small>${esc(c.soil)} · ${esc(c.weather)}</small></div>`).join('')||'<div class="item">No similar cases yet — be the first to add one!</div>';
+ $('opts').innerHTML=r.options.map((o,i)=>`<button class="opt" onclick="pick(this.dataset.a,this)" data-a="${esc(o.action)}"><b>${esc(o.action)}</b><br><small>${o.success_pct}% success · ${o.n} case(s)</small></button>`).join('');
+ $('res').scrollIntoView({behavior:'smooth'});stats();
+}
+function pick(a,el){document.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));if(el)el.classList.add('sel');
+ if(!a.trim())return;$('act').value=a;$('outbox').classList.remove('hide');step(4)}
+async function save(){
+ const b={crop:$('crop').value,soil:$('soil').value,weather:$('weather').value,problem:$('problem').value,action:$('act').value,outcome:$('outc').value,result:$('result').value};
+ if(!b.action.trim())return alert('Enter the action taken');
+ const r=await(await fetch('/api/outcome',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)})).json();
+ $('cnt').textContent=r.memory_count;step(5);$('msg').innerHTML='<mark>✅ Saved! Memory is now '+r.memory_count+'. Click "Find evidence" again to see it help the next farmer.</mark>';
+}
+stats();
+</script></body></html>
